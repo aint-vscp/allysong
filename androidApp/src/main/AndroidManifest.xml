@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ====================================================================== -->
+<!-- AllySong – Android Manifest                                            -->
+<!-- ====================================================================== -->
+<!-- Declares all permissions required for:                                 -->
+<!--   1. Accelerometer sensor access (no permission needed).               -->
+<!--   2. BLE mesh networking via Nearby Connections.                        -->
+<!--   3. Foreground service for persistent mesh operation.                  -->
+<!-- ====================================================================== -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- ── BLE / Nearby Connections permissions ─────────────────────────── -->
+    <!-- Bluetooth discovery and connection (Android 12+) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Legacy Bluetooth (pre-Android 12 devices) -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Nearby Connections requires coarse location for BLE scanning -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Wi-Fi Direct (used by Nearby Connections for high-bandwidth links) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Vibrate for emergency alerts -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Keep the mesh alive while screen is off -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Draw over other apps for disaster alert overlay (chat-head style) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Auto-restart monitoring after device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Internet NOT required – this app works entirely offline -->
+
+    <!-- ── Hardware feature declarations ────────────────────────────────── -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer"
+        android:required="true" />
+    <uses-feature android:name="android.hardware.sensor.barometer"
+        android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+    <uses-feature android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application
+        android:name=".AllySongApplication"
+        android:label="AllySong"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AllySong"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".AllySongService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Continuous sensor monitoring for earthquake and typhoon detection in disaster response app" />
+        </service>
+
+        <!-- Auto-restart service after device reboot or app update -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

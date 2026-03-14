@@ -1,0 +1,42 @@
+# ── Build outputs ─────────────────────────────────────────────────────────────
+build/
+*.apk
+*.aab
+*.ap_
+
+# ── Gradle ────────────────────────────────────────────────────────────────────
+.gradle/
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ── Local configuration (machine-specific) ────────────────────────────────────
+local.properties
+*.iml
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Signing keys (NEVER commit) ──────────────────────────────────────────────
+*.jks
+*.keystore
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Python (training script) ─────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# ── TFLite model (large binary, regenerate with train_seismic_model.py) ──────
+shared/src/androidMain/assets/seismic_detector.tflite

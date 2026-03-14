@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal theme for the AllySong Android shell. -->
+<!-- The actual theming is handled by Compose Multiplatform (AllySongTheme). -->
+<resources>
+    <style name="Theme.AllySong" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorBackground">#121212</item>
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#121212</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

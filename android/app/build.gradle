@@ -1,0 +1,43 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "com.allysong.app"
+    compileSdk 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId "com.allysong.app"
+        minSdk 24          // Android 7.0 — broad device support
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug   // use debug keys for prototype
+            minifyEnabled false
+        }
+    }
+
+    // Prevent TFLite model files from being compressed in the APK.
+    aaptOptions {
+        noCompress "tflite"
+    }
+}
+
+flutter {
+    source '../..'
+}
