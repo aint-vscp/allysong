@@ -35,12 +35,13 @@ class AesGcmPayloadEncryptor(
 
     private val secretKey = SecretKeySpec(keyBytes, "AES")
     private val random = SecureRandom()
+    private val cipherTransformation = "AES/GCM/NoPadding"
 
     override fun encrypt(plaintext: ByteArray): ByteArray {
         // Generate a fresh random IV for each encryption
         val iv = ByteArray(IV_SIZE).also { random.nextBytes(it) }
 
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val cipher = Cipher.getInstance(cipherTransformation)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(TAG_SIZE_BITS, iv))
 
         val ciphertext = cipher.doFinal(plaintext)
@@ -56,7 +57,7 @@ class AesGcmPayloadEncryptor(
             val iv = ciphertext.copyOfRange(0, IV_SIZE)
             val encrypted = ciphertext.copyOfRange(IV_SIZE, ciphertext.size)
 
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            val cipher = Cipher.getInstance(cipherTransformation)
             cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(TAG_SIZE_BITS, iv))
 
             cipher.doFinal(encrypted)

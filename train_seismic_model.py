@@ -35,7 +35,7 @@ earthquake detection. Key prior work:
 
 Our approach: custom-trained lightweight 1D CNN on synthetic data that
 models realistic phone sensor characteristics (random orientation,
-gravity baseline, MEMS noise). The human_activity class covers 11
+gravity baseline, MEMS noise). The human_activity class covers 13
 distinct everyday activities to minimize false positives.
 
 References:
@@ -70,7 +70,7 @@ from tensorflow import keras
 WINDOW_SIZE = 50          # 50 samples = 1 second at 50 Hz
 NUM_AXES = 3              # x, y, z
 NUM_CLASSES = 4           # background, p_wave, s_wave, human_activity
-SAMPLES_PER_CLASS = 8000  # More samples for better generalization
+SAMPLES_PER_CLASS = 10000  # More samples for better generalization
 EPOCHS = 60
 BATCH_SIZE = 64
 VALIDATION_SPLIT = 0.2
@@ -192,7 +192,7 @@ def generate_s_wave(n):
 
 
 def generate_human_activity(n):
-    """Human activity: 11 distinct activities that could trigger false positives.
+    """Human activity: 13 distinct activities that could trigger false positives.
 
     Each activity has unique characteristics that differ from earthquakes:
     - Walking/running: periodic, narrowband, one dominant axis (vertical)
@@ -205,11 +205,14 @@ def generate_human_activity(n):
     - Typing: rapid low-amplitude taps (~5-8 Hz), mostly one axis
     - Jumping: large single spike + landing, clear periodicity if repeated
     - Cycling: smooth medium-frequency oscillation (~1-2 Hz)
+    - Fidgeting: aperiodic multi-axis 1-5 m/s², irregular timing
+    - Pocket shift: slow gravity drift + intermittent bumps
     """
     samples = []
     activities = [
         "walking", "running", "pickup", "pocket", "tap", "putdown",
-        "driving", "stairs", "door_slam", "typing", "jumping", "cycling"
+        "driving", "stairs", "door_slam", "typing", "jumping", "cycling",
+        "fidgeting", "pocket_shift"
     ]
 
     for _ in range(n):
@@ -413,6 +416,45 @@ def generate_human_activity(n):
                 pedal_signal = pedal_amp * axis_scale * np.sin(2 * np.pi * pedal_freq * t + phase)
                 road_signal = road_amp * np.sin(2 * np.pi * road_freq * t + np.random.uniform(0, 2 * np.pi))
                 base[:, axis] += (pedal_signal + road_signal).astype(np.float32)
+
+        elif activity == "fidgeting":
+            # Fidgeting: aperiodic multi-axis motion, 1-5 m/s², irregular timing
+            # Key: appears multi-axis and energetic like an earthquake, but
+            # energy comes in short irregular bursts, not sustained
+            num_fidgets = np.random.randint(3, 8)
+            for _ in range(num_fidgets):
+                fidget_start = np.random.randint(0, WINDOW_SIZE - 5)
+                fidget_len = np.random.randint(3, 10)
+                fidget_amp = np.random.uniform(1.0, 5.0)
+                fidget_freq = np.random.uniform(2.0, 8.0)
+                for axis in range(NUM_AXES):
+                    axis_amp = fidget_amp * np.random.uniform(0.3, 1.0)
+                    for i in range(fidget_start, min(fidget_start + fidget_len, WINDOW_SIZE)):
+                        elapsed = (i - fidget_start) / 50.0
+                        envelope = axis_amp * np.exp(-2.0 * elapsed)
+                        base[i, axis] += envelope * np.sin(2 * np.pi * fidget_freq * elapsed + np.random.uniform(0, 2 * np.pi))
+
+        elif activity == "pocket_shift":
+            # Pocket shift: slow gravity drift from phone sliding/rotating in pocket
+            # + intermittent bumps from leg movement
+            # Key: slow low-amplitude baseline drift, occasional isolated bumps
+            drift_speed = np.random.uniform(0.5, 2.0)  # Hz
+            drift_amp = np.random.uniform(0.5, 2.0)
+            for axis in range(NUM_AXES):
+                phase = np.random.uniform(0, 2 * np.pi)
+                drift = drift_amp * np.random.uniform(0.3, 1.0) * np.sin(2 * np.pi * drift_speed * t + phase)
+                base[:, axis] += drift.astype(np.float32)
+            # Add 2-5 intermittent bumps from body movement
+            num_bumps = np.random.randint(2, 6)
+            for _ in range(num_bumps):
+                bump_pos = np.random.randint(3, WINDOW_SIZE - 3)
+                bump_amp = np.random.uniform(1.5, 4.0)
+                bump_len = np.random.randint(2, 5)
+                for axis in range(NUM_AXES):
+                    axis_amp = bump_amp * np.random.uniform(0.2, 1.0)
+                    for j in range(min(bump_len, WINDOW_SIZE - bump_pos)):
+                        decay = np.exp(-3.0 * j / bump_len)
+                        base[bump_pos + j, axis] += axis_amp * decay
 
         samples.append(base)
     return np.array(samples, dtype=np.float32)

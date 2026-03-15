@@ -52,6 +52,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Allow this Activity to appear over the lockscreen and wake the display
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+
         // Request permissions before setting content
         requestRequiredPermissions()
         requestOverlayPermission()

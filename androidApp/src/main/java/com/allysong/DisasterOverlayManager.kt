@@ -104,19 +104,20 @@ class DisasterOverlayManager(private val context: Context) {
             ).toInt()
         }
 
-        // Root container
+        // Root container — semi-transparent scrim so content behind is visible
         val root = FrameLayout(context).apply {
             setPadding(dp(16), dp(48), dp(16), dp(16))
+            setBackgroundColor(Color.argb(0x66, 0, 0, 0)) // 40% black scrim
         }
 
-        // Alert card
+        // Alert card — semi-transparent dark background
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(16), dp(20), dp(16))
 
-            // Rounded corners + dark background with red border
+            // Rounded corners + semi-transparent dark background with red border
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#1A0A0A"))
+                setColor(Color.argb(0xCC, 0x1A, 0x0A, 0x0A)) // ~80% opacity
                 cornerRadius = dp(16).toFloat()
                 setStroke(dp(2), Color.parseColor("#FF1744"))
             }
@@ -201,11 +202,34 @@ class DisasterOverlayManager(private val context: Context) {
             }
         }
 
+        // ── Dismiss button (prominent, easy to tap) ──
+        val dismissSafeBtn = TextView(context).apply {
+            text = "DISMISS \u2014 I\u2019M SAFE"
+            setTextColor(Color.WHITE)
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(10), dp(16), dp(10))
+            background = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+                cornerRadius = dp(8).toFloat()
+                setStroke(dp(2), Color.WHITE)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(8)
+            }
+            setOnClickListener { dismiss() }
+        }
+
         // Assemble card
         card.addView(headerRow)
         card.addView(confidenceText)
         card.addView(descText)
         card.addView(actionBtn)
+        card.addView(dismissSafeBtn)
 
         root.addView(card, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -237,7 +261,8 @@ class DisasterOverlayManager(private val context: Context) {
             type,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL

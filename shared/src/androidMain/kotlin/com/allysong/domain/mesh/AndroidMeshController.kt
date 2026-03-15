@@ -50,8 +50,8 @@ private const val MAX_SEEN_MESSAGE_IDS = 2000
 /** Service ID for Nearby Connections discovery (must match across devices). */
 private const val SERVICE_ID = "com.allysong.mesh"
 
-/** Handshake timeout in milliseconds (10 seconds). */
-private const val HANDSHAKE_TIMEOUT_MS = 10_000L
+/** Handshake timeout in milliseconds (5 seconds). */
+private const val HANDSHAKE_TIMEOUT_MS = 5_000L
 
 /** XOR pattern for handshake response verification. */
 private val HANDSHAKE_XOR_PATTERN = byteArrayOf(
@@ -95,6 +95,9 @@ class AndroidMeshController(
 
     // Callback for history sync when a new peer joins
     private var onPeerVerifiedCallback: ((endpointId: String) -> List<MeshMessage>)? = null
+
+    // Cached SecureRandom instance (avoids entropy seeding delay per handshake)
+    private val secureRandom = java.security.SecureRandom()
 
     // Bounded LRU set of already-seen message IDs to prevent duplicate
     // processing while avoiding unbounded memory growth.
@@ -290,11 +293,16 @@ class AndroidMeshController(
                 else current + peer
             }
 
-            // Auto-request connection to discovered AllySong devices
+            // Auto-request connection with fast transport upgrade
+            val connectionOptions = ConnectionOptions.Builder()
+                .setDisruptiveUpgrade(true)
+                .build()
+
             connectionsClient.requestConnection(
                 localAlias,
                 endpointId,
-                connectionLifecycleCallback
+                connectionLifecycleCallback,
+                connectionOptions
             )
         }
 
@@ -549,7 +557,7 @@ class AndroidMeshController(
     // 3. Challenger verifies the response matches expected value.
 
     private fun sendHandshakeChallenge(endpointId: String) {
-        val nonce = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        val nonce = ByteArray(16).also { secureRandom.nextBytes(it) }
         val nonceHex = nonce.joinToString("") { "%02x".format(it) }
 
         // Compute expected response: XOR nonce with repeating pattern

@@ -36,7 +36,7 @@ import java.nio.channels.FileChannel
 //      - Rejects if human_activity class is dominant or > 25%
 //
 //   Layer 4: Consecutive-window confirmation
-//      - Requires 2 consecutive positive windows (~1 second sustained)
+//      - Requires 3 consecutive positive windows (~1.5 seconds sustained)
 //      - Eliminates any remaining isolated transient false positives
 //
 // Model Input:  [1, 50, 3] float tensor (1 second at 50 Hz, raw x/y/z)
@@ -79,7 +79,7 @@ class AndroidDisasterDetectionEngine(
     // to trigger a detection. This eliminates single-window spikes from
     // phone drops, door slams, etc.
     private var consecutiveDetections = 0
-    private val requiredConsecutive = 2
+    private val requiredConsecutive = 3
 
     init {
         try {
@@ -217,7 +217,7 @@ class AndroidDisasterDetectionEngine(
     private val staLength get() = (windowSize * 0.2).toInt().coerceAtLeast(3)
 
     /** STA/LTA ratio threshold — raised for phone accelerometer. */
-    private val staLtaThreshold = 4.0f
+    private val staLtaThreshold = 5.0f
 
     private fun analyzeWithHeuristic(window: List<AccelerometerReading>): DisasterEvent? {
         // Layer 1: rejection filters
@@ -246,12 +246,12 @@ class AndroidDisasterDetectionEngine(
         // P-wave signature: sharp onset spike with high STA/LTA ratio
         val spikeCount = magnitudes.count { it > mean + 3 * stdDev }
         val hasPWaveSignature = staLtaRatio > staLtaThreshold &&
-                spikeCount >= 3 && maxDeviation > 6.0f
+                spikeCount >= 3 && maxDeviation > 8.0f
 
         // S-wave signature: sustained high variance (lateral shaking)
         val sustainedHighCount = magnitudes.count { it > mean + 2 * stdDev }
         val hasSWaveSignature = staLtaRatio > (staLtaThreshold * 0.7f) &&
-                stdDev > 2.5f && sustainedHighCount > 8
+                stdDev > 3.5f && sustainedHighCount > 12
 
         // Multi-axis correlation: earthquakes excite all axes simultaneously.
         // Human activities (walking, typing) often dominate a single axis.
@@ -264,6 +264,16 @@ class AndroidDisasterDetectionEngine(
             val maxAxisStd = axisStdDevs.max()
             val activeAxes = axisStdDevs.count { it > maxAxisStd * 0.25f }
             if (activeAxes < 2) return null
+        }
+
+        // Sustained energy density filter: earthquakes sustain energy across
+        // most of the window. Human activity energy comes in bursts/steps.
+        // Reject if fewer than 50% of samples exceed mean + 1.5 * stdDev.
+        if (hasPWaveSignature || hasSWaveSignature) {
+            val energyThreshold = mean + 1.5f * stdDev
+            val aboveCount = magnitudes.count { it > energyThreshold }
+            val fraction = aboveCount.toFloat() / magnitudes.size
+            if (fraction < 0.50f) return null
         }
 
         val baseConfidence = ((staLtaRatio / staLtaThreshold) * 0.75f)
@@ -385,9 +395,9 @@ class AndroidDisasterDetectionEngine(
 
         if (stdDev < 0.5f) return false
 
-        // At 50 Hz: lag 14 = 3.5 Hz (fast running), lag 33 = ~1.5 Hz (slow walk)
-        val minLag = 14
-        val maxLag = (windowSize * 0.7).toInt().coerceAtMost(35)
+        // At 50 Hz: lag 12 = ~4 Hz (fast running), lag 50 = 1 Hz (slow fidgeting/sway)
+        val minLag = 12
+        val maxLag = (windowSize * 0.7).toInt().coerceAtMost(50)
 
         var bestCorrelation = 0f
 
@@ -411,7 +421,7 @@ class AndroidDisasterDetectionEngine(
             }
         }
 
-        return bestCorrelation > 0.55f
+        return bestCorrelation > 0.40f
     }
 
     // ── Cleanup ─────────────────────────────────────────────────────────────

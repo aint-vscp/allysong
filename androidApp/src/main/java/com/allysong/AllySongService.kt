@@ -148,6 +148,8 @@ class AllySongService : Service() {
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .setVibrate(longArrayOf(0, 500, 200, 500, 200, 500))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(pendingIntent, true)
             .build()
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIFICATION_ID_ALERT, notification)
